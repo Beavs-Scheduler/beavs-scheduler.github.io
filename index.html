@@ -47,6 +47,25 @@
     align-items:center;
     gap:12px;
   }
+  .day-tags {
+    display: flex;
+    gap: 3px;
+    margin-top: 4px;
+  }
+  .day-tag {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: var(--tan-faint);
+    color: var(--black);
+    opacity: 0.4;
+  }
+  .day-tag.active {
+    background: var(--navy);
+    color: #fff;
+    opacity: 1;
+  }
   .topbar a {
   color: white;
   }
@@ -410,7 +429,7 @@ input[type="range"]::-moz-range-thumb:active {
           </div>
           <div>
             <label class="field-label" for="yearInput">Year</label>
-            <input type="number" id="yearInput" value="2026" inputmode="numeric">
+            <select id="yearInput"></select>
           </div>
         </div>
         <p class="term-preview" id="termPreview"></p>
@@ -854,6 +873,19 @@ function csvField(value) {
   return str;
 }
 
+
+function populateYearDropdown() {
+  const currentYear = new Date().getFullYear();
+  yearInput.innerHTML = "";
+  for (let y = currentYear; y <= currentYear + 3; y++) {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = y;
+    yearInput.appendChild(opt);
+  }
+}
+  
+  
 function buildCSV(analyzedSchedules) {
   const headers = ["Option","Courses","CRNs","Meeting Times","Instructors","Total Credits","Offline Credits","Total Fees ($)"];
   const rows = [headers];
@@ -967,9 +999,10 @@ function setCurrentTerm() {
 }
 
 seasonSelect.addEventListener("change", updateTermPreview);
-yearInput.addEventListener("input", updateTermPreview);
+yearInput.addEventListener("change", updateTermPreview);
 
 // Run on load
+populateYearDropdown();
 setCurrentTerm();
 updateTermPreview();
 
@@ -1484,9 +1517,30 @@ function renderTable() {
 
     const pills = sched.schedule.map((c) => `<span class="course-pill">${escapeHtml(c.code)}</span>`).join("");
 
+    // Calculate active days for this specific schedule option
+    const activeDays = new Set();
+    sched.schedule.forEach((course) => {
+      const times = safeParseMeetingTimes(course.meetingTimes);
+      if (times) {
+        times.forEach((t) => {
+          const d = normalizeDayCode(t.meet_day);
+          if (d) activeDays.add(d);
+        });
+      }
+    });
+
+    const daysOrder = ["M", "T", "W", "R", "F"];
+    const dayTagsHtml = daysOrder.map((d) => {
+      const isActive = activeDays.has(d);
+      return `<span class="day-tag ${isActive ? "active" : ""}">${d}</span>`;
+    }).join("");
+
     summaryRow.innerHTML = `
       <td class="num-cell">${displayIndex + 1}</td>
-      <td><div class="course-pills">${pills}</div></td>
+      <td>
+        <div class="course-pills">${pills}</div>
+        <div class="day-tags">${dayTagsHtml}</div>
+      </td>
       <td class="num-cell">${sched.totalCredits.toFixed(1)}</td>
       <td class="num-cell">${offlineHeader.hidden ? "" : sched.totalCreditsOffline.toFixed(1)}</td>
       <td class="num-cell">$${sched.totalFees.toFixed(2)}</td>
