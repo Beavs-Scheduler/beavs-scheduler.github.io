@@ -1642,6 +1642,8 @@ function renderTable() {
     });
 
     const daysOrder = ["M", "T", "W", "R", "F"];
+    if (activeDays.has("S")) daysOrder.push("S");
+    if (activeDays.has("U")) daysOrder.push("U");
     const dayTagsHtml = daysOrder.map((d) => {
       const isActive = activeDays.has(d);
       return `<span class="day-tag ${isActive ? "active" : ""}">${d}</span>`;
