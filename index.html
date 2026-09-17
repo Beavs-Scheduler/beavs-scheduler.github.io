@@ -29,7 +29,7 @@
     --max-w:760px;
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
+  html,body{margin:0;padding:0; position:relative;}
   body{
     font-family:var(--font-body);
     color:var(--black);
@@ -421,44 +421,36 @@ input[type="range"]::-moz-range-thumb:active {
   }
   footer p{margin:6px 0;}
 
-  /* ---- Side ad rails ---- */
-  .page-body{
-    display:flex;
-    justify-content:center;
-    align-items:flex-start;
-    gap:24px;
-    max-width:1360px;
-    margin:0 auto;
-  }
-  .page-main{
-    flex:1 1 var(--max-w);
-    max-width:var(--max-w);
-    min-width:0;
-  }
-  .ad-rail{
-    flex:0 0 240px;
+  /* ---- Left ad rail — absolutely positioned near the viewport edge so it
+     never shifts or narrows the centered main content, and simply scrolls
+     along with the page (it's not position:fixed/sticky). ---- */
+  .ad-rail-left{
+    position:absolute;
+    top:170px;
+    left:28px;
+    width:300px;
     display:flex;
     flex-direction:column;
     gap:20px;
-    padding-top:34px;
-    position:static; /* scrolls with the page, not sticky */
   }
   .ad-slot{
     border:1px dashed var(--tan);
     border-radius:8px;
     background:var(--panel);
-    min-height:250px;
+    width:300px;
+    height:250px;
     display:flex;
     align-items:center;
     justify-content:center;
     overflow:hidden;
     text-align:center;
     padding:8px;
+    flex-shrink:0;
   }
   .ad-slot img, .ad-slot iframe{max-width:100%; display:block; border-radius:6px; border:none;}
   .ad-slot-label{font-size:11px; color:#8a857a; text-transform:uppercase; letter-spacing:.04em; margin:0 0 6px;}
-  @media (max-width: 1180px){
-    .ad-rail{display:none;}
+  @media (max-width: 1440px){
+    .ad-rail-left{display:none;}
   }
 
   @media (max-width: 520px){
@@ -487,26 +479,36 @@ input[type="range"]::-moz-range-thumb:active {
   </div>
 </div>
 
-<div class="page-body">
-
-  <aside class="ad-rail ad-rail-left" aria-label="Advertisement">
-    <div class="ad-slot">
-      <!-- AD SLOT (left) — replace this div's contents with your ad
-           image/link or network embed code, e.g.:
-           <a href="https://example.com" target="_blank" rel="noopener sponsored">
-             <img src="your-ad.png" alt="Advertisement">
-           </a>
-      -->
-      <div>
-        <p class="ad-slot-label">Advertisement</p>
-        <span style="font-size:13px; color:#a39c8f;">240×250 ad slot</span>
-      </div>
+<aside class="ad-rail-left" aria-label="Advertisement">
+  <div class="ad-slot">
+    <!-- AD SLOT 1 (300x250) — replace this div's contents with your ad
+         image/link or network embed code, e.g.:
+         <a href="https://example.com" target="_blank" rel="noopener sponsored">
+           <img src="your-ad.png" alt="Advertisement">
+         </a>
+    -->
+    <div>
+      <p class="ad-slot-label">Advertisement</p>
+      <span style="font-size:13px; color:#a39c8f;">300×250 ad slot</span>
     </div>
-  </aside>
+  </div>
+  <div class="ad-slot">
+    <!-- AD SLOT 2 (300x250) -->
+    <div>
+      <p class="ad-slot-label">Advertisement</p>
+      <span style="font-size:13px; color:#a39c8f;">300×250 ad slot</span>
+    </div>
+  </div>
+  <div class="ad-slot">
+    <!-- AD SLOT 3 (300x250) -->
+    <div>
+      <p class="ad-slot-label">Advertisement</p>
+      <span style="font-size:13px; color:#a39c8f;">300×250 ad slot</span>
+    </div>
+  </div>
+</aside>
 
-  <div class="page-main">
-
-  <div class="wrap">
+<div class="wrap">
 
   <!-- ============================= SETUP ============================= -->
   <div id="setupPanel">
@@ -736,21 +738,6 @@ input[type="range"]::-moz-range-thumb:active {
   <p>Thanks to my INTO advisor, <b>Anthony Zak</b>, for pointing out the scheduling problem that inspired this website.</p>
   <p>Please contact me at <a href="mailto:nguyhuup@oregonstate.edu">nguyhuup@oregonstate.edu</a> if you find any errors or bugs.</p>
 </footer>
-
-  </div>
-
-  <aside class="ad-rail ad-rail-right" aria-label="Advertisement">
-    <div class="ad-slot">
-      <!-- AD SLOT (right) — replace this div's contents with your ad
-           image/link or network embed code -->
-      <div>
-        <p class="ad-slot-label">Advertisement</p>
-        <span style="font-size:13px; color:#a39c8f;">240×250 ad slot</span>
-      </div>
-    </div>
-  </aside>
-
-</div>
 
 <script>
 /* =====================================================================
