@@ -261,9 +261,31 @@ input[type="range"]::-moz-range-thumb:active {
     background:var(--orange);
     border-color:var(--orange);
     color:#fff;
+    position:relative;
+    overflow:hidden;
+    transition:border-color .2s ease;
   }
-  .btn-primary:hover{background:var(--orange-dark); border-color:var(--orange-dark);}
+  .btn-primary:hover{
+    border-color:var(--orange-dark);
+    background-image:repeating-linear-gradient(
+      45deg,
+      var(--orange) 0px,
+      var(--orange) 18px,
+      #9a958c 18px,
+      #9a958c 36px
+    );
+    background-size:200% 200%;
+    animation:stripe-slide 1.1s linear infinite;
+  }
+  @keyframes stripe-slide{
+    from{background-position:0 0;}
+    to{background-position:-51px -51px;}
+  }
   .btn-primary:disabled{background:#e3ab94; border-color:#e3ab94; cursor:not-allowed;}
+  .btn-primary:disabled:hover{background-image:none; animation:none; background:#e3ab94;}
+  @media (prefers-reduced-motion: reduce){
+    .btn-primary:hover{animation:none;}
+  }
   .btn-text{
     background:none; border:none; color:var(--navy); font-weight:600;
     font-size:13.5px; cursor:pointer; padding:4px 0; text-decoration:underline;
@@ -614,7 +636,7 @@ input[type="range"]::-moz-range-thumb:active {
 
     <div id="emptyResultsWrap" class="callout-empty" hidden>
       <p><strong>No conflict-free schedules turned up.</strong></p>
-      <p>Try lowering the number of classes per term, switching to “Any campus,” or removing whichever class has the fewest section options.</p>
+      <p>Try lowering the number of classes per term, switching to "Any campus," or removing whichever class has the fewest section options.</p>
     </div>
   </section>
 
@@ -651,7 +673,7 @@ input[type="range"]::-moz-range-thumb:active {
 </div>
 
 <footer>
-  <p>Class data comes live from OSU's <a href="https://classes.oregonstate.edu/" target="_blank">scheduler</a> for the term and campus you choose. This tool checks time and date conflicts only — it does not check prerequisites, holds, major restrictions, or seat counts beyond “open vs. full.” Variable-credit courses may not total correctly; double-check those in the schedule directly.</p>
+  <p>Class data comes live from OSU's <a href="https://classes.oregonstate.edu/" target="_blank">scheduler</a> for the term and campus you choose. This tool checks time and date conflicts only — it does not check prerequisites, holds, major restrictions, or seat counts beyond "open vs. full." Variable-credit courses may not total correctly; double-check those in the schedule directly.</p>
   <p>Thanks to my INTO advisor, <b>Anthony Zak</b>, for pointing out the scheduling problem that inspired this website.</p>
   <p>Please contact me at <a href="mailto:nguyhuup@oregonstate.edu">nguyhuup@oregonstate.edu</a> if you find any errors or bugs.</p>
 </footer>
