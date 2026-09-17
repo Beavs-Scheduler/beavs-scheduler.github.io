@@ -421,6 +421,46 @@ input[type="range"]::-moz-range-thumb:active {
   }
   footer p{margin:6px 0;}
 
+  /* ---- Side ad rails ---- */
+  .page-body{
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    gap:24px;
+    max-width:1360px;
+    margin:0 auto;
+  }
+  .page-main{
+    flex:1 1 var(--max-w);
+    max-width:var(--max-w);
+    min-width:0;
+  }
+  .ad-rail{
+    flex:0 0 240px;
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+    padding-top:34px;
+    position:static; /* scrolls with the page, not sticky */
+  }
+  .ad-slot{
+    border:1px dashed var(--tan);
+    border-radius:8px;
+    background:var(--panel);
+    min-height:250px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    text-align:center;
+    padding:8px;
+  }
+  .ad-slot img, .ad-slot iframe{max-width:100%; display:block; border-radius:6px; border:none;}
+  .ad-slot-label{font-size:11px; color:#8a857a; text-transform:uppercase; letter-spacing:.04em; margin:0 0 6px;}
+  @media (max-width: 1180px){
+    .ad-rail{display:none;}
+  }
+
   @media (max-width: 520px){
     .step{gap:12px;}
     .step-num{font-size:26px; width:28px;}
@@ -447,7 +487,26 @@ input[type="range"]::-moz-range-thumb:active {
   </div>
 </div>
 
-<div class="wrap">
+<div class="page-body">
+
+  <aside class="ad-rail ad-rail-left" aria-label="Advertisement">
+    <div class="ad-slot">
+      <!-- AD SLOT (left) — replace this div's contents with your ad
+           image/link or network embed code, e.g.:
+           <a href="https://example.com" target="_blank" rel="noopener sponsored">
+             <img src="your-ad.png" alt="Advertisement">
+           </a>
+      -->
+      <div>
+        <p class="ad-slot-label">Advertisement</p>
+        <span style="font-size:13px; color:#a39c8f;">240×250 ad slot</span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="page-main">
+
+  <div class="wrap">
 
   <!-- ============================= SETUP ============================= -->
   <div id="setupPanel">
@@ -513,7 +572,7 @@ input[type="range"]::-moz-range-thumb:active {
       <div class="step-num">3</div>
       <div class="step-body">
         <h3>Days you can attend class</h3>
-        <p class="hint">Uncheck any day the student can't be in class. A schedule that would need any section on an excluded day is skipped before the search even runs — it does speed up the process. Online sections are never affected by this.</p>
+        <p class="hint">Uncheck any day the student can't be in class. A schedule that would need any section on an excluded day is skipped before the search even runs — it doesn't just hide results afterward. Online/arranged sections are never affected by this.</p>
         <fieldset>
           <legend style="position:absolute; width:1px; height:1px; overflow:hidden;">Days available</legend>
           <div class="day-grid" id="dayGrid">
@@ -650,8 +709,8 @@ input[type="range"]::-moz-range-thumb:active {
     <p>In the OSU scheduler, searching for a class sends a request for JSON data to OSU's servers. The algorithm then extracts all relevant information from the received data.</p>
     
     <figure>
-      <img src="network_api.png" width="100%" alt="Browser Network tab showing JSON response from OSU scheduler search for MTH 253Z">
-      <figcaption>Intercepting the JSON payload for a class search (MTH 253Z) in the browser's Network tab.</figcaption>
+      <img src="network_api.png" width="100%" alt="Browser Network tab showing JSON response from OSU scheduler search for MTH 253">
+      <figcaption>Intercepting the JSON payload for a class search (MTH 253) in the browser's Network tab.</figcaption>
     </figure>
 
     <p>After collecting details like meeting times, instructors, fees, and campus locations, it evaluates every class combination to check for time conflicts. By tracking course IDs, it can identify specific class types, such as studios, recitations, or labs.</p>
@@ -677,6 +736,21 @@ input[type="range"]::-moz-range-thumb:active {
   <p>Thanks to my INTO advisor, <b>Anthony Zak</b>, for pointing out the scheduling problem that inspired this website.</p>
   <p>Please contact me at <a href="mailto:nguyhuup@oregonstate.edu">nguyhuup@oregonstate.edu</a> if you find any errors or bugs.</p>
 </footer>
+
+  </div>
+
+  <aside class="ad-rail ad-rail-right" aria-label="Advertisement">
+    <div class="ad-slot">
+      <!-- AD SLOT (right) — replace this div's contents with your ad
+           image/link or network embed code -->
+      <div>
+        <p class="ad-slot-label">Advertisement</p>
+        <span style="font-size:13px; color:#a39c8f;">240×250 ad slot</span>
+      </div>
+    </div>
+  </aside>
+
+</div>
 
 <script>
 /* =====================================================================
