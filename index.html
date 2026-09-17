@@ -221,6 +221,28 @@ input[type="range"]::-moz-range-thumb:active {
     box-shadow:inset 0 0 0 1px var(--orange);
   }
 
+  .day-grid{display:flex; flex-wrap:wrap; gap:8px;}
+  .day-option{position:relative;}
+  .day-option input{position:absolute; opacity:0; width:1px; height:1px;}
+  .day-option span{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:1.5px solid var(--tan);
+    border-radius:8px;
+    padding:10px 4px;
+    font-size:13.5px;
+    font-weight:600;
+    cursor:pointer;
+    user-select:none;
+    width:56px;
+  }
+  .day-option input:checked + span{
+    border-color:var(--orange);
+    background:#FCEFE9;
+    box-shadow:inset 0 0 0 1px var(--orange);
+  }
+
   .course-input-row{display:flex; gap:8px;}
   .course-input-row input{flex:1;}
   .btn{
@@ -468,6 +490,26 @@ input[type="range"]::-moz-range-thumb:active {
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-body">
+        <h3>Days you can attend class</h3>
+        <p class="hint">Uncheck any day the student can't be in class. A schedule that would need any section on an excluded day is skipped before the search even runs — it doesn't just hide results afterward. Online/arranged sections are never affected by this.</p>
+        <fieldset>
+          <legend style="position:absolute; width:1px; height:1px; overflow:hidden;">Days available</legend>
+          <div class="day-grid" id="dayGrid">
+            <label class="day-option"><input type="checkbox" name="dayPref" value="M" checked><span>Mon</span></label>
+            <label class="day-option"><input type="checkbox" name="dayPref" value="T" checked><span>Tue</span></label>
+            <label class="day-option"><input type="checkbox" name="dayPref" value="W" checked><span>Wed</span></label>
+            <label class="day-option"><input type="checkbox" name="dayPref" value="R" checked><span>Thu</span></label>
+            <label class="day-option"><input type="checkbox" name="dayPref" value="F" checked><span>Fri</span></label>
+            <label class="day-option"><input type="checkbox" name="dayPref" value="S" checked><span>Sat</span></label>
+            <label class="day-option"><input type="checkbox" name="dayPref" value="U" checked><span>Sun</span></label>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
         <h3>Classes to consider</h3>
         <p class="hint">Add every class the student is willing to take this term — the more you add, the more combinations we can check. Format: subject + number, like <strong>MTH 251Z</strong>.</p>
         <div class="course-input-row">
@@ -480,7 +522,7 @@ input[type="range"]::-moz-range-thumb:active {
     </div>
 
     <div class="step">
-      <div class="step-num">4</div>
+      <div class="step-num">5</div>
       <div class="step-body">
         <h3>Classes per term</h3>
         <p class="hint">How many of those classes should each schedule include?</p>
@@ -493,7 +535,7 @@ input[type="range"]::-moz-range-thumb:active {
     </div>
 
     <div class="step">
-      <div class="step-num">5</div>
+      <div class="step-num">6</div>
       <div class="step-body">
         <h3>Max schedules to show</h3>
         <p class="hint">Choose how many valid schedules the app should find before stopping.Since <a href="https://en.wikipedia.org/wiki/Combinatorial_explosion" target="_blank">combinatorial explosion </a> is unavoidable, choosing a very high limit with many classes may increase load times.</p>
@@ -1249,6 +1291,24 @@ async function runGenerationInner() {
     logLine(`Dropped ${code}: no valid lecture + recitation/lab pairing found.`, "warn");
   });
 
+  const allowedDays = getSelectedDayPreferences();
+  if (allowedDays.size < 7) {
+    logLine(`Limiting to sections that meet only on: ${[...allowedDays].map((d) => DAY_LABELS[d]).join(", ") || "none"}…`);
+    const dayFilteredDropped = [];
+    for (const code of Object.keys(allCourseBundles)) {
+      const filteredBundles = allCourseBundles[code].filter((bundle) => bundleFitsAllowedDays(bundle, allowedDays));
+      if (filteredBundles.length === 0) {
+        dayFilteredDropped.push(code);
+        delete allCourseBundles[code];
+      } else {
+        allCourseBundles[code] = filteredBundles;
+      }
+    }
+    dayFilteredDropped.forEach((code) => {
+      logLine(`Dropped ${code}: every open section meets on a day you excluded.`, "warn");
+    });
+  }
+
   let targetCount = parseInt(countInput.value, 10) || 1;
   const availableCodes = Object.keys(allCourseBundles);
 
@@ -1354,6 +1414,36 @@ function normalizeDayCode(raw) {
     return NUMERIC_DAY_CODE_TO_LETTER[key];
   }
   return null; // unrecognized code -- skip this meeting rather than guess
+}
+
+// Returns the set of day letters ("M","T","W","R","F","S","U") the person
+// left checked in the "Days you can attend class" step. Reads the DOM
+// directly (rather than caching in `state`) so it's always current at the
+// moment generation actually runs.
+function getSelectedDayPreferences() {
+  const boxes = document.querySelectorAll('input[name="dayPref"]:checked');
+  return new Set(Array.from(boxes).map((b) => b.value));
+}
+
+// A bundle (one or more linked sections, e.g. lecture+lab) is allowed
+// under a day preference only if EVERY meeting of EVERY section in it
+// falls on an allowed day. Sections with no parseable meeting time
+// (online/arranged) are never excluded by a day preference, matching how
+// checkOverlap already treats them as unconstrained. An unrecognized day
+// code is treated the same way, on purpose -- normalizeDayCode already
+// decided "skip rather than guess" for the calendar view, and doing
+// anything else here (like silently blocking a section) would drop a
+// class over data we can't actually interpret.
+function bundleFitsAllowedDays(bundle, allowedDays) {
+  return bundle.every((section) => {
+    const times = safeParseMeetingTimes(section.meetingTimes);
+    if (!times || times.length === 0) return true;
+    return times.every((t) => {
+      const day = normalizeDayCode(t.meet_day);
+      if (!day) return true;
+      return allowedDays.has(day);
+    });
+  });
 }
 
 function colorForCourse(code) {
@@ -1646,6 +1736,11 @@ generateBtn.addEventListener("click", () => {
   }
   if (state.courses.length === 0) {
     setupError.textContent = "Add at least one class first.";
+    setupError.hidden = false;
+    return;
+  }
+  if (getSelectedDayPreferences().size === 0) {
+    setupError.textContent = "Select at least one day the student can attend class.";
     setupError.hidden = false;
     return;
   }
