@@ -1,10 +1,1 @@
-# OSU-Class-conflict-finder
-My advisor wants to develop a program to determine if a class schedule is feasible. I found the project interesting, so I decided to work on it with him.
-
-
-# How to use?
-1) Download time_conflict_finder.py run it input the term, list of classes, number of classes then the output will be all possible combinations of classes
-
-2) Copy the meeting_time for the combination you want to take, run the html code and iput the meeting_time to visualize the calendar.
-
-If you don't want to download python code, you  can run it here: https://colab.research.google.com/drive/1oSYz35OaIzrZGZAvU6I2d5mzUhKZFR_U?usp=sharing
+[Beavs Scheduler](https://beavs-scheduler.github.io) is a website developed by Loc Nguyen (fatlock1712) with the help of his INTO advisor, Anthony Zack.
