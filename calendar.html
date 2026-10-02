@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSU Calendar Exporter</title>
+<link rel="icon" type="image/png" href="logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --orange:#D73F09; --orange-dark:#B23407; --black:#171512; --navy:#003B5C;
+    --tan:#B7A99A; --tan-faint:#e9e3da; --paper:#FFFFFF; --panel:#FAF8F4; --error:#A6321D;
+    --font-display:'Fraunces', serif; --font-body:'Inter', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:var(--font-body); color:var(--black); background:var(--paper); margin:0; line-height:1.5;}
+  a{color:var(--navy);}
+  .topbar{background:var(--black); color:#fff; padding:14px 20px; display:flex; align-items:center; gap:12px;}
+  .topbar h1{font-family:var(--font-display); font-size:19px; font-weight:600; margin:0;}
+  .topbar a{color:white; text-decoration:none;}
+  .wrap{max-width:600px; margin:40px auto; padding:0 20px;}
+  
+  .card{background:var(--panel); border:1px solid var(--tan-faint); border-radius:12px; padding:24px;}
+  .card h2{font-family:var(--font-display); font-size:24px; margin:0 0 8px;}
+  .card p{font-size:14px; color:#4a463f; margin:0 0 24px;}
+
+  .form-group{margin-bottom:16px;}
+  label{display:block; font-size:13.5px; font-weight:600; margin-bottom:6px; color:#3a3730;}
+  input[type="text"], input[type="number"], select{
+    width:100%; font-family:inherit; font-size:15px; padding:10px 12px;
+    border:1.5px solid var(--tan); border-radius:6px; background:#fff; color:var(--black);
+  }
+  .row{display:flex; gap:12px;}
+  .row > div{flex:1;}
+
+  input[type="color"]{
+    -webkit-appearance: none; padding:0; border:none; width:100%; height:44px;
+    border-radius:6px; cursor:pointer; background:none;
+  }
+  input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type="color"]::-webkit-color-swatch { border: 1.5px solid var(--tan); border-radius: 6px; }
+
+  .btn{
+    width:100%; font-family:inherit; font-weight:600; font-size:16px; border-radius:6px;
+    border:1.5px solid var(--orange); background:var(--orange); color:#fff;
+    padding:14px; cursor:pointer; margin-top:12px; transition:0.2s;
+  }
+  .btn:hover{background:var(--orange-dark); border-color:var(--orange-dark);}
+  .btn:disabled{background:#e3ab94; border-color:#e3ab94; cursor:not-allowed;}
+  
+  #log{margin-top:16px; font-size:13px; color:#4a463f; background:#fff; border:1px solid var(--tan-faint); border-radius:6px; padding:12px; max-height:150px; overflow-y:auto; display:none;}
+  .log-err{color:var(--error); font-weight:600;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <img src="osu-logo.png" alt="OSU Logo" style="height: 44px; width: auto; margin-right: 8px;">
+  <div>
+    <h1><a href="index.html">OSU Scheduler</a> / ICS Exporter</h1>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="card">
+    <h2>Finalize Your Calendar</h2>
+    <p>Paste the CRNs you registered for. We'll fetch the exact meeting times, generate clickable maps, and build your .ics file.</p>
+    
+    <div class="row form-group">
+      <div>
+        <label>Term</label>
+        <select id="seasonSelect">
+          <option value="FALL">Fall</option>
+          <option value="WINTER">Winter</option>
+          <option value="SPRING">Spring</option>
+          <option value="SUMMER">Summer</option>
+        </select>
+      </div>
+      <div>
+        <label>Year</label>
+        <select id="yearInput"></select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Registered CRNs (comma separated)</label>
+      <input type="text" id="crnInput" placeholder="e.g. 14669, 11373, 10170">
+    </div>
+
+    <div class="form-group">
+      <label>Event Name Prefix (Optional)</label>
+      <input type="text" id="prefixInput" placeholder="e.g. OSU - ">
+    </div>
+
+    <div class="row form-group">
+      <div>
+        <label>Notification Alert</label>
+        <select id="alarmSelect">
+          <option value="0">No alert</option>
+          <option value="15">15 minutes before</option>
+          <option value="30" selected>30 minutes before</option>
+          <option value="60">1 hour before</option>
+        </select>
+      </div>
+      <div>
+        <label>Calendar Color</label>
+        <input type="color" id="colorInput" value="#D73F09">
+      </div>
+    </div>
+
+    <button type="button" class="btn" id="generateBtn">Download .ics File</button>
+    <div id="log"></div>
+  </div>
+</div>
+
+<script>
+/* --- Setup Default Term & Year --- */
+const seasonSelect = document.getElementById("seasonSelect");
+const yearInput = document.getElementById("yearInput");
+const crnInput = document.getElementById("crnInput");
+const prefixInput = document.getElementById("prefixInput");
+const alarmSelect = document.getElementById("alarmSelect");
+const colorInput = document.getElementById("colorInput");
+const generateBtn = document.getElementById("generateBtn");
+const logDiv = document.getElementById("log");
+
+function initDefaults() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth() + 1;
+  for(let i=y; i<=y+3; i++) yearInput.add(new Option(i, i));
+  seasonSelect.value = (m>=1 && m<=3) ? "WINTER" : (m>=4 && m<=6) ? "SPRING" : (m>=7 && m<=8) ? "SUMMER" : "FALL";
+}
+initDefaults();
+
+/* --- API Utilities --- */
+const API_SEARCH = "https://classes.oregonstate.edu/api/?page=fose&route=search";
+const API_DETAILS = "https://classes.oregonstate.edu/api/?page=fose&route=details";
+const CORS_PROXIES = [
+  "https://osu-proxy.fatlock17122007.workers.dev/?url=",
+  "https://osu-proxy.phatloc17122007.workers.dev/?url="
+];
+
+async function postJSON(url, payload) {
+  const attempt = (target) => fetch(target, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+  });
+  try {
+    let res = await attempt(url);
+    if (res.ok) return await res.json();
+  } catch(e) {}
+  
+  for (const p of CORS_PROXIES) {
+    try {
+      let res = await attempt(p + encodeURIComponent(url));
+      if (res.ok) return await res.json();
+    } catch(e) {}
+  }
+  throw new Error("Network failure");
+}
+
+function computeTermCode(season, year) {
+  const sfx = { SUMMER: "00", FALL: "01", WINTER: "02", SPRING: "03" }[season];
+  return `${(season === "SUMMER" || season === "FALL") ? parseInt(year)+1 : year}${sfx}`;
+}
+
+function logMsg(msg, isErr=false) {
+  logDiv.style.display = "block";
+  logDiv.innerHTML += `<div class="${isErr?'log-err':''}">${msg}</div>`;
+  logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+/* --- ICS Generation Logic --- */
+generateBtn.addEventListener("click", async () => {
+  const crns = crnInput.value.split(",").map(s => s.trim()).filter(s => /^\d{5}$/.test(s));
+  if (crns.length === 0) return alert("Please enter at least one valid 5-digit CRN.");
+  
+  generateBtn.disabled = true;
+  generateBtn.textContent = "Fetching class details...";
+  logDiv.innerHTML = "";
+  
+  const termCode = computeTermCode(seasonSelect.value, yearInput.value);
+  const prefix = prefixInput.value.trim() ? prefixInput.value.trim() + " " : "";
+  const alarmMins = parseInt(alarmSelect.value, 10);
+  const colorHex = colorInput.value;
+  
+  let ics = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Loc Nguyen//OSU Scheduler//EN", 
+    "CALSCALE:GREGORIAN", "METHOD:PUBLISH", `X-APPLE-CALENDAR-COLOR:${colorHex}`
+  ];
+
+  const jsDays = { "0": 1, "1": 2, "2": 3, "3": 4, "4": 5, "5": 6, "6": 0 };
+  const rruleDays = { "0": "MO", "1": "TU", "2": "WE", "3": "TH", "4": "FR", "5": "SA", "6": "SU" };
+  const campusMap = { "C": "Oregon State - Corvallis", "DSC": "Ecampus", "B": "Cascades" };
+
+  for (const crn of crns) {
+    logMsg(`Looking up CRN ${crn}...`);
+    try {
+      const searchRes = await postJSON(API_SEARCH, { other: { srcdb: termCode }, criteria: [{ field: "crn", value: crn }] });
+      const results = searchRes.results || searchRes;
+      if (!results || results.length === 0) {
+        logMsg(`CRN ${crn} not found for this term.`, true);
+        continue;
+      }
+      
+      const course = results[0];
+      const details = await postJSON(API_DETAILS, { key: `key:${course.key}`, srcdb: termCode });
+      
+      let times = [];
+      try { times = JSON.parse(course.meetingTimes); } catch(e){}
+      if (!times.length) {
+        logMsg(`CRN ${crn} is online/arranged (no fixed times). Skipping.`, true);
+        continue;
+      }
+
+      // Extract Credits
+      let credits = "0.0";
+      if (details && details.hours_html) {
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = details.hours_html;
+        credits = tempDiv.textContent.trim();
+      }
+
+      // Extract HTML location cleanly based on the OSU DOM structure
+      let location = "";
+      if (details && details.meeting_html) {
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = details.meeting_html;
+        const roomAnchor = tempDiv.querySelector("span[class^='meet-room-'] a");
+        if (roomAnchor) {
+          location = roomAnchor.textContent.trim();
+        } else {
+          const roomSpan = tempDiv.querySelector("span[class^='meet-room-']");
+          if (roomSpan) location = roomSpan.textContent.replace(/^[\s]*in[\s]*/i, "").trim();
+        }
+      }
+
+      const campStr = campusMap[course.camp] || "Oregon State University";
+
+      times.forEach((t) => {
+        if (!course.start_date || !course.end_date) return;
+        const startD = new Date(course.start_date + "T00:00:00");
+        while (startD.getDay() !== jsDays[t.meet_day]) startD.setDate(startD.getDate() + 1);
+        
+        const sd = `${startD.getFullYear()}${String(startD.getMonth()+1).padStart(2,'0')}${String(startD.getDate()).padStart(2,'0')}`;
+        const ed = course.end_date.replace(/-/g, "");
+        const st = String(t.start_time).padStart(4, "0") + "00";
+        const et = String(t.end_time).padStart(4, "0") + "00";
+
+        // Generate map-friendly and official text
+        let mapLocation = "";
+        let officialLocationText = `Campus: ${campStr}`;
+        if (location) {
+          officialLocationText += ` Building: ${location}`;
+          if (course.camp === "C") {
+            const cleanBuilding = location.split("-")[1]?.replace(/\(.*\)/g, "").trim() || location;
+            mapLocation = `${cleanBuilding}, Oregon State University, Corvallis, OR`;
+          } else if (course.camp === "B") {
+            mapLocation = `${location}, OSU Cascades, Bend, OR`;
+          } else {
+            mapLocation = location;
+          }
+        }
+
+        const fullTitle = `${course.title || ""} ${course.code} ${course.no || ""}`.trim();
+        let desc = `CRN: ${crn}\\nCredit Hours: ${credits}\\nLevel: Undergraduate\\nInstructor: ${course.instr || "TBA"} (Primary)\\n\\nOSU Location: ${officialLocationText}`;
+
+        ics.push("BEGIN:VEVENT");
+        ics.push(`SUMMARY:${prefix}${fullTitle}`);
+        ics.push(`DESCRIPTION:${desc}`);
+        if (mapLocation) ics.push(`LOCATION:${mapLocation}`);
+        ics.push(`COLOR:${colorHex}`);
+        ics.push(`DTSTART;TZID=America/Los_Angeles:${sd}T${st}`);
+        ics.push(`DTEND;TZID=America/Los_Angeles:${sd}T${et}`);
+        ics.push(`RRULE:FREQ=WEEKLY;UNTIL=${ed}T235959Z;BYDAY=${rruleDays[t.meet_day]}`);
+        
+        if (alarmMins > 0) {
+          ics.push("BEGIN:VALARM");
+          ics.push(`TRIGGER:-PT${alarmMins}M`);
+          ics.push("ACTION:DISPLAY");
+          ics.push(`DESCRIPTION:${fullTitle}`);
+          ics.push("END:VALARM");
+        }
+        ics.push("END:VEVENT");
+      });
+      logMsg(`Added ${course.code} (${crn})`);
+    } catch(e) {
+      logMsg(`Network error on CRN ${crn}.`, true);
+    }
+  }
+
+  ics.push("END:VCALENDAR");
+
+  const blob = new Blob([ics.join("\r\n")], { type: "text/calendar;charset=utf-8;" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `OSU_Final_Schedule_${termCode}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  logMsg(`<b>Done! .ics file downloaded.</b>`);
+  generateBtn.textContent = "Download .ics File";
+  generateBtn.disabled = false;
+});
+</script>
+</body>
+</html>
