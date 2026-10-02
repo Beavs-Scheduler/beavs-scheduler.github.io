@@ -221,7 +221,9 @@ generateBtn.addEventListener("click", async () => {
         while (startD.getDay() !== jsDays[t.meet_day]) startD.setDate(startD.getDate() + 1);
         
         const sd = `${startD.getFullYear()}${String(startD.getMonth()+1).padStart(2,'0')}${String(startD.getDate()).padStart(2,'0')}`;
-        const ed = course.end_date.replace(/-/g, "");
+        const endD = new Date(course.end_date + "T00:00:00");
+        endD.setDate(endD.getDate() + 1);
+        const ed = `${endD.getFullYear()}${String(endD.getMonth()+1).padStart(2,'0')}${String(endD.getDate()).padStart(2,'0')}`;
         const st = String(t.start_time).padStart(4, "0") + "00";
         const et = String(t.end_time).padStart(4, "0") + "00";
 
