@@ -33,13 +33,6 @@
   .row{display:flex; gap:12px;}
   .row > div{flex:1;}
 
-  input[type="color"]{
-    -webkit-appearance: none; padding:0; border:none; width:100%; height:44px;
-    border-radius:6px; cursor:pointer; background:none;
-  }
-  input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
-  input[type="color"]::-webkit-color-swatch { border: 1.5px solid var(--tan); border-radius: 6px; }
-
   .btn{
     width:100%; font-family:inherit; font-weight:600; font-size:16px; border-radius:6px;
     border:1.5px solid var(--orange); background:var(--orange); color:#fff;
@@ -92,21 +85,10 @@
       <input type="text" id="prefixInput" placeholder="e.g. OSU - ">
     </div>
 
-    <div class="row form-group">
-      <div>
-        <label>Notification Alert</label>
-        <select id="alarmSelect">
-          <option value="0">No alert</option>
-          <option value="15">15 minutes before</option>
-          <option value="30" selected>30 minutes before</option>
-          <option value="60">1 hour before</option>
-        </select>
-      </div>
-      <div>
-        <label>Calendar Color</label>
-        <input type="color" id="colorInput" value="#D73F09">
-      </div>
-    </div>
+    <!-- Small tip for Google Calendar users -->
+    <p style="font-size: 13px; color: #6b665c; background: #fff; padding: 10px; border: 1px solid var(--tan-faint); border-radius: 6px;">
+      <b>Tip:</b> Before importing the downloaded file, create a new blank calendar (e.g. "Fall Classes") and import the file directly into it. This lets you easily change the color of all classes, notifications at once!
+    </p>
 
     <button type="button" class="btn" id="generateBtn">Download .ics File</button>
     <div id="log"></div>
@@ -119,8 +101,6 @@ const seasonSelect = document.getElementById("seasonSelect");
 const yearInput = document.getElementById("yearInput");
 const crnInput = document.getElementById("crnInput");
 const prefixInput = document.getElementById("prefixInput");
-const alarmSelect = document.getElementById("alarmSelect");
-const colorInput = document.getElementById("colorInput");
 const generateBtn = document.getElementById("generateBtn");
 const logDiv = document.getElementById("log");
 
@@ -181,12 +161,10 @@ generateBtn.addEventListener("click", async () => {
   
   const termCode = computeTermCode(seasonSelect.value, yearInput.value);
   const prefix = prefixInput.value.trim() ? prefixInput.value.trim() + " " : "";
-  const alarmMins = parseInt(alarmSelect.value, 10);
-  const colorHex = colorInput.value;
   
   let ics = [
-    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Loc Nguyen//OSU Scheduler//EN", 
-    "CALSCALE:GREGORIAN", "METHOD:PUBLISH", `X-APPLE-CALENDAR-COLOR:${colorHex}`
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Loc Nguyen//Beavs Scheduler//EN", 
+    "CALSCALE:GREGORIAN", "METHOD:PUBLISH"
   ];
 
   const jsDays = { "0": 1, "1": 2, "2": 3, "3": 4, "4": 5, "5": 6, "6": 0 };
@@ -269,18 +247,13 @@ generateBtn.addEventListener("click", async () => {
         ics.push(`SUMMARY:${prefix}${fullTitle}`);
         ics.push(`DESCRIPTION:${desc}`);
         if (mapLocation) ics.push(`LOCATION:${mapLocation}`);
-        ics.push(`COLOR:${colorHex}`);
+        
+        // This tells calendars to mark the student as "Busy" during class time
+        ics.push("TRANSP:OPAQUE");
+        
         ics.push(`DTSTART;TZID=America/Los_Angeles:${sd}T${st}`);
         ics.push(`DTEND;TZID=America/Los_Angeles:${sd}T${et}`);
         ics.push(`RRULE:FREQ=WEEKLY;UNTIL=${ed}T235959Z;BYDAY=${rruleDays[t.meet_day]}`);
-        
-        if (alarmMins > 0) {
-          ics.push("BEGIN:VALARM");
-          ics.push(`TRIGGER:-PT${alarmMins}M`);
-          ics.push("ACTION:DISPLAY");
-          ics.push(`DESCRIPTION:${fullTitle}`);
-          ics.push("END:VALARM");
-        }
         ics.push("END:VEVENT");
       });
       logMsg(`Added ${course.code} (${crn})`);
@@ -294,7 +267,7 @@ generateBtn.addEventListener("click", async () => {
   const blob = new Blob([ics.join("\r\n")], { type: "text/calendar;charset=utf-8;" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `OSU_Final_Schedule_${termCode}.ics`;
+  a.download = `Beavs_Scheduler_${termCode}.ics`;
   document.body.appendChild(a);
   a.click();
   a.remove();
