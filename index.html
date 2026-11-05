@@ -808,20 +808,26 @@ function scheduleHasConflicts(bundleTuple) {
   return false;
 }
 
+// Companion sections (recitation/lab) have codes like "C1": one letter + digit.
+// Lecture "A", online "Y", and hybrid "HYB" are standalone sections.
+function isCompanion(c) {
+  return /^[A-Z]\d+$/.test(String(c.schd || "").toUpperCase());
+}
+
 function bundleComponents(courseClasses) {
-  const componentTypes = [...new Set(courseClasses.map((c) => c.schd))];
-  if (componentTypes.length <= 1) return courseClasses.map((c) => [c]);
+  const primary = courseClasses.filter((c) => !isCompanion(c));
+  const secondary = courseClasses.filter(isCompanion);
 
-  const primary = courseClasses.filter((c) => c.schd === componentTypes[0]);
-  const secondary = courseClasses.filter((c) => c.schd === componentTypes[1]);
+  // No recitation/lab exists (e.g. WR 314): every section stands alone.
+  if (secondary.length === 0) return courseClasses.map((c) => [c]);
 
-  const campusesPrimary = new Set(primary.map((c) => c.camp));
-  const campusesSecondary = new Set(secondary.map((c) => c.camp));
-  const shareCampus = [...campusesPrimary].some((c) => campusesSecondary.has(c));
-  if (!shareCampus) return courseClasses.map((c) => [c]);
-
-  let bundles = [];
+  const bundles = [];
   for (const prim of primary) {
+    // Online sections never need a recitation
+    if (DISTANCE_CAMPUS_CODES.includes((prim.camp || "").toUpperCase())) {
+      bundles.push([prim]);
+      continue;
+    }
     for (const sec of secondary) {
       if (prim.camp !== sec.camp) continue;
       const pSec = prim.no || "", sSec = sec.no || "";
@@ -832,6 +838,7 @@ function bundleComponents(courseClasses) {
   }
   if (bundles.length === 0) {
     for (const prim of primary) {
+      if (DISTANCE_CAMPUS_CODES.includes((prim.camp || "").toUpperCase())) continue;
       for (const sec of secondary) {
         if (prim.camp !== sec.camp) continue;
         if (!checkOverlap(prim, sec)) bundles.push([prim, sec]);
@@ -848,7 +855,7 @@ function computeTermCode(season, calendarYear) {
   return `${academicYear}${suffix}`;
 }
 
-const DISTANCE_CAMPUS_CODES = ["DI", "DSC", "DL"];
+const DISTANCE_CAMPUS_CODES = ["DI", "DSC", "DL", "DB"];
 
 function filterOpenCampusSections(rawSections, campus) {
   return rawSections.filter((section) => {
