@@ -465,7 +465,34 @@ input[type="range"]::-moz-range-thumb:active {
     .progress-bar-fill{animation:none; width:60%;}
     .chevron{transition:none;}
   }
-
+  /* ---- Time block picker ---- */
+.tb-scroll{overflow-x:auto; padding-bottom:6px;}
+.tb-grid{
+  display:grid;
+  grid-template-columns:44px repeat(var(--slots), minmax(18px, 1fr));
+  min-width:560px;
+  user-select:none; -webkit-user-select:none;
+}
+.tb-hour{
+  grid-column:span 2;
+  font-size:11px; color:#6b665c;
+  padding:0 0 4px 3px;
+  border-left:1px solid var(--tan-faint);
+}
+.tb-day{
+  font-size:12.5px; font-weight:700; color:#3a3730;
+  display:flex; align-items:center; cursor:pointer;
+}
+.tb-cell{
+  height:30px;
+  background:var(--tan-faint);
+  border-right:1px solid #fff;
+  border-bottom:2px solid #fff;
+  cursor:pointer;
+  touch-action:none;
+}
+.tb-cell.odd{border-right:3px solid #fff;}
+.tb-cell.on{background:var(--green);}
   [hidden]{display:none !important;}
 </style>
 </head>
@@ -588,9 +615,18 @@ input[type="range"]::-moz-range-thumb:active {
         </fieldset>
       </div>
     </div>
+    <div class="step">
+  <div class="step-num">4</div>
+  <div class="step-body">
+    <h3>Times you can attend class</h3>
+    <p class="hint">Click or drag across blocks to turn them on or off. Click a day name to toggle the whole day. Green means available. A section is skipped if any part of its meeting time falls in an off block. Online/arranged sections are never affected.</p>
+    <div class="tb-scroll"><div class="tb-grid" id="timeGrid"></div></div>
+    <button class="btn-text" id="timeReset" type="button">Reset to 8am–5pm</button>
+  </div>
+</div>
 
     <div class="step">
-      <div class="step-num">4</div>
+      <div class="step-num">5</div>
       <div class="step-body">
         <h3>Classes to consider</h3>
         <p class="hint">Add every class the student is willing to take this term — the more you add, the more combinations we can check. Format: subject + number, like <strong>MTH 251Z</strong>.</p>
@@ -604,7 +640,7 @@ input[type="range"]::-moz-range-thumb:active {
     </div>
 
     <div class="step">
-      <div class="step-num">5</div>
+      <div class="step-num">6</div>
       <div class="step-body">
         <h3>Classes per term</h3>
         <p class="hint">How many of those classes should each schedule include?</p>
@@ -617,7 +653,7 @@ input[type="range"]::-moz-range-thumb:active {
     </div>
 
     <div class="step">
-      <div class="step-num">6</div>
+      <div class="step-num">7</div>
       <div class="step-body">
         <h3>Max schedules to show</h3>
         <p class="hint">Choose how many valid schedules the app should find before stopping.Since <a href="https://en.wikipedia.org/wiki/Combinatorial_explosion" target="_blank">combinatorial explosion </a> is unavoidable, choosing a very high limit with many classes may increase load times.</p>
@@ -1209,7 +1245,120 @@ countDown.addEventListener("click", () => {
 countUp.addEventListener("click", () => {
   countInput.value = Math.min(12, (parseInt(countInput.value, 10) || 1) + 1);
 });
+/* ---- Time block picker ---- */
+const TB_DAYS = [["M","Mon"],["T","Tue"],["W","Wed"],["R","Thu"],["F","Fri"]];
+const TB_START = 7 * 60;      // grid starts 7:00am
+const TB_END = 21 * 60;       // grid ends 9:00pm
+const TB_SLOT = 30;           // minutes per block
+const TB_SLOTS = (TB_END - TB_START) / TB_SLOT;
+const TB_DEFAULT_ON_START = 8 * 60;   // default enabled: 8am...
+const TB_DEFAULT_ON_END = 17 * 60;    // ...to 5pm
 
+const timeGridEl = el("timeGrid");
+state.timeGrid = {};
+
+function tbLabel(h) {
+  return `${h % 12 || 12}${h < 12 ? "am" : "pm"}`;
+}
+
+function resetTimeGrid() {
+  TB_DAYS.forEach(([d]) => {
+    state.timeGrid[d] = Array.from({ length: TB_SLOTS }, (_, s) => {
+      const m = TB_START + s * TB_SLOT;
+      return m >= TB_DEFAULT_ON_START && m < TB_DEFAULT_ON_END;
+    });
+  });
+  renderTimeGrid();
+}
+
+function renderTimeGrid() {
+  timeGridEl.innerHTML = "";
+  timeGridEl.style.setProperty("--slots", TB_SLOTS);
+
+  // header row: empty corner + one label per hour
+  timeGridEl.appendChild(document.createElement("div"));
+  for (let h = TB_START / 60; h < TB_END / 60; h++) {
+    const lab = document.createElement("div");
+    lab.className = "tb-hour";
+    lab.textContent = tbLabel(h);
+    timeGridEl.appendChild(lab);
+  }
+
+  TB_DAYS.forEach(([d, name]) => {
+    const dayLab = document.createElement("div");
+    dayLab.className = "tb-day";
+    dayLab.textContent = name;
+    dayLab.dataset.dayLabel = d;
+    timeGridEl.appendChild(dayLab);
+
+    for (let s = 0; s < TB_SLOTS; s++) {
+      const cell = document.createElement("div");
+      cell.className = "tb-cell" + (s % 2 === 1 ? " odd" : "") + (state.timeGrid[d][s] ? " on" : "");
+      cell.dataset.day = d;
+      cell.dataset.slot = s;
+      const m = TB_START + s * TB_SLOT;
+      cell.title = `${name} ${tbLabel(Math.floor(m / 60))}${m % 60 ? ":30" : ""}`.replace(/(\d+)(am|pm)(:30)?$/, (x, h, ap, half) => `${h}${half || ":00"}${ap}`);
+      timeGridEl.appendChild(cell);
+    }
+  });
+}
+
+let tbPainting = false, tbValue = true;
+function tbCellFrom(node) { return node && node.closest ? node.closest(".tb-cell") : null; }
+function tbApply(cell) {
+  state.timeGrid[cell.dataset.day][+cell.dataset.slot] = tbValue;
+  cell.classList.toggle("on", tbValue);
+}
+
+timeGridEl.addEventListener("pointerdown", (e) => {
+  const cell = tbCellFrom(e.target);
+  if (!cell) return;
+  e.preventDefault();
+  tbPainting = true;
+  tbValue = !state.timeGrid[cell.dataset.day][+cell.dataset.slot]; // first cell decides on/off
+  tbApply(cell);
+});
+document.addEventListener("pointermove", (e) => {
+  if (!tbPainting) return;
+  const cell = tbCellFrom(document.elementFromPoint(e.clientX, e.clientY));
+  if (cell && timeGridEl.contains(cell)) tbApply(cell);
+});
+["pointerup", "pointercancel"].forEach((ev) =>
+  document.addEventListener(ev, () => { tbPainting = false; })
+);
+
+// click a day name = toggle that whole day
+timeGridEl.addEventListener("click", (e) => {
+  const lab = e.target.closest("[data-day-label]");
+  if (!lab) return;
+  const d = lab.dataset.dayLabel;
+  const allOn = state.timeGrid[d].every(Boolean);
+  state.timeGrid[d] = state.timeGrid[d].map(() => !allOn);
+  renderTimeGrid();
+});
+
+el("timeReset").addEventListener("click", resetTimeGrid);
+resetTimeGrid();
+
+// A bundle fits if every meeting stays inside the grid and
+// only touches enabled blocks. Sat/Sun and online sections are ignored here.
+function bundleFitsTimeBlocks(bundle) {
+  return bundle.every((section) => {
+    const times = safeParseMeetingTimes(section.meetingTimes);
+    if (!times || times.length === 0) return true;
+    return times.every((t) => {
+      const day = normalizeDayCode(t.meet_day);
+      if (!day || !state.timeGrid[day]) return true;
+      const start = timeToMinutes(t.start_time), end = timeToMinutes(t.end_time);
+      if (start < TB_START || end > TB_END) return false;
+      for (let s = 0; s < TB_SLOTS; s++) {
+        const slotStart = TB_START + s * TB_SLOT, slotEnd = slotStart + TB_SLOT;
+        if (start < slotEnd && end > slotStart && !state.timeGrid[day][s]) return false;
+      }
+      return true;
+    });
+  });
+}
 /* =====================================================================
    PART C — API LAYER (with a CORS-proxy fallback)
    ===================================================================== */
@@ -1393,10 +1542,25 @@ async function runGenerationInner() {
         allCourseBundles[code] = filteredBundles;
       }
     }
-    dayFilteredDropped.forEach((code) => {
+        dayFilteredDropped.forEach((code) => {
       logLine(`Dropped ${code}: every open section meets on a day you excluded.`, "warn");
     });
   }
+
+  // Time-block filter (runs regardless of the day checkboxes)
+  const timeDropped = [];
+  for (const code of Object.keys(allCourseBundles)) {
+    const filtered = allCourseBundles[code].filter(bundleFitsTimeBlocks);
+    if (filtered.length === 0) {
+      timeDropped.push(code);
+      delete allCourseBundles[code];
+    } else {
+      allCourseBundles[code] = filtered;
+    }
+  }
+  timeDropped.forEach((code) => {
+    logLine(`Dropped ${code}: every open section meets during a time block you turned off.`, "warn");
+  });
 
   let targetCount = parseInt(countInput.value, 10) || 1;
   const availableCodes = Object.keys(allCourseBundles);
