@@ -597,36 +597,30 @@ input[type="range"]::-moz-range-thumb:active {
     </div>
 
     <div class="step">
-      <div class="step-num">3</div>
-      <div class="step-body">
-        <h3>Days you can attend class</h3>
-        <p class="hint">Uncheck any day the student can't be in class. A schedule that would need any section on an excluded day is skipped before the search even runs — it doesn't just hide results afterward. Online/arranged sections are never affected by this.</p>
-        <fieldset>
-          <legend style="position:absolute; width:1px; height:1px; overflow:hidden;">Days available</legend>
-          <div class="day-grid" id="dayGrid">
-            <label class="day-option"><input type="checkbox" name="dayPref" value="M" checked><span>Mon</span></label>
-            <label class="day-option"><input type="checkbox" name="dayPref" value="T" checked><span>Tue</span></label>
-            <label class="day-option"><input type="checkbox" name="dayPref" value="W" checked><span>Wed</span></label>
-            <label class="day-option"><input type="checkbox" name="dayPref" value="R" checked><span>Thu</span></label>
-            <label class="day-option"><input type="checkbox" name="dayPref" value="F" checked><span>Fri</span></label>
-            <label class="day-option"><input type="checkbox" name="dayPref" value="S" checked><span>Sat</span></label>
-            <label class="day-option"><input type="checkbox" name="dayPref" value="U" checked><span>Sun</span></label>
-          </div>
-        </fieldset>
-      </div>
-    </div>
-    <div class="step">
-  <div class="step-num">4</div>
+  <div class="step-num">3</div>
   <div class="step-body">
-    <h3>Times you can attend class</h3>
-    <p class="hint">Click or drag across blocks to turn them on or off. Click a day name to toggle the whole day. Green means available. A section is skipped if any part of its meeting time falls in an off block. Online/arranged sections are never affected.</p>
-    <div class="tb-scroll"><div class="tb-grid" id="timeGrid"></div></div>
-    <button class="btn-text" id="timeReset" type="button">Reset to 8am–5pm</button>
+    <h3>Days and times you can attend class</h3>
+    <p class="hint">Pick the days the student can attend, then adjust times for just those days. Click or drag across blocks to turn them on or off, or click a day name to toggle that whole day. Green means available. A section is skipped if it meets on an unselected day or during an off block. Online/arranged sections are never affected.</p>
+    <fieldset>
+      <legend style="position:absolute; width:1px; height:1px; overflow:hidden;">Days available</legend>
+      <div class="day-grid" id="dayGrid">
+        <label class="day-option"><input type="checkbox" name="dayPref" value="M" checked><span>Mon</span></label>
+        <label class="day-option"><input type="checkbox" name="dayPref" value="T" checked><span>Tue</span></label>
+        <label class="day-option"><input type="checkbox" name="dayPref" value="W" checked><span>Wed</span></label>
+        <label class="day-option"><input type="checkbox" name="dayPref" value="R" checked><span>Thu</span></label>
+        <label class="day-option"><input type="checkbox" name="dayPref" value="F" checked><span>Fri</span></label>
+        <label class="day-option"><input type="checkbox" name="dayPref" value="S" checked><span>Sat</span></label>
+        <label class="day-option"><input type="checkbox" name="dayPref" value="U" checked><span>Sun</span></label>
+      </div>
+    </fieldset>
+    <div class="tb-scroll" style="margin-top:18px;"><div class="tb-grid" id="timeGrid"></div></div>
+    <p class="hint" id="timeEmpty" hidden style="margin:10px 0 0;">Select at least one day above to set times.</p>
+    <button class="btn-text" id="timeReset" type="button">Reset times to 8am–5pm</button>
   </div>
 </div>
 
     <div class="step">
-      <div class="step-num">5</div>
+      <div class="step-num">4</div>
       <div class="step-body">
         <h3>Classes to consider</h3>
         <p class="hint">Add every class the student is willing to take this term — the more you add, the more combinations we can check. Format: subject + number, like <strong>MTH 251Z</strong>.</p>
@@ -640,7 +634,7 @@ input[type="range"]::-moz-range-thumb:active {
     </div>
 
     <div class="step">
-      <div class="step-num">6</div>
+      <div class="step-num">5</div>
       <div class="step-body">
         <h3>Classes per term</h3>
         <p class="hint">How many of those classes should each schedule include?</p>
@@ -653,7 +647,7 @@ input[type="range"]::-moz-range-thumb:active {
     </div>
 
     <div class="step">
-      <div class="step-num">7</div>
+      <div class="step-num">6</div>
       <div class="step-body">
         <h3>Max schedules to show</h3>
         <p class="hint">Choose how many valid schedules the app should find before stopping.Since <a href="https://en.wikipedia.org/wiki/Combinatorial_explosion" target="_blank">combinatorial explosion </a> is unavoidable, choosing a very high limit with many classes may increase load times.</p>
@@ -1246,7 +1240,7 @@ countUp.addEventListener("click", () => {
   countInput.value = Math.min(12, (parseInt(countInput.value, 10) || 1) + 1);
 });
 /* ---- Time block picker ---- */
-const TB_DAYS = [["M","Mon"],["T","Tue"],["W","Wed"],["R","Thu"],["F","Fri"]];
+const TB_DAYS = [["M","Mon"],["T","Tue"],["W","Wed"],["R","Thu"],["F","Fri"],["S","Sat"],["U","Sun"]];
 const TB_START = 7 * 60;      // grid starts 7:00am
 const TB_END = 21 * 60;       // grid ends 9:00pm
 const TB_SLOT = 30;           // minutes per block
@@ -1275,6 +1269,11 @@ function renderTimeGrid() {
   timeGridEl.innerHTML = "";
   timeGridEl.style.setProperty("--slots", TB_SLOTS);
 
+  const active = getSelectedDayPreferences();
+  const shown = TB_DAYS.filter(([d]) => active.has(d));
+  el("timeEmpty").hidden = shown.length > 0;
+  if (shown.length === 0) return;
+
   // header row: empty corner + one label per hour
   timeGridEl.appendChild(document.createElement("div"));
   for (let h = TB_START / 60; h < TB_END / 60; h++) {
@@ -1284,7 +1283,7 @@ function renderTimeGrid() {
     timeGridEl.appendChild(lab);
   }
 
-  TB_DAYS.forEach(([d, name]) => {
+  shown.forEach(([d, name]) => {
     const dayLab = document.createElement("div");
     dayLab.className = "tb-day";
     dayLab.textContent = name;
@@ -1297,7 +1296,8 @@ function renderTimeGrid() {
       cell.dataset.day = d;
       cell.dataset.slot = s;
       const m = TB_START + s * TB_SLOT;
-      cell.title = `${name} ${tbLabel(Math.floor(m / 60))}${m % 60 ? ":30" : ""}`.replace(/(\d+)(am|pm)(:30)?$/, (x, h, ap, half) => `${h}${half || ":00"}${ap}`);
+      const h24 = Math.floor(m / 60), mm = m % 60;
+      cell.title = `${name} ${h24 % 12 || 12}:${mm === 0 ? "00" : "30"}${h24 < 12 ? "am" : "pm"}`;
       timeGridEl.appendChild(cell);
     }
   });
@@ -1338,6 +1338,7 @@ timeGridEl.addEventListener("click", (e) => {
 });
 
 el("timeReset").addEventListener("click", resetTimeGrid);
+el("dayGrid").addEventListener("change", renderTimeGrid);
 resetTimeGrid();
 
 // A bundle fits if every meeting stays inside the grid and
